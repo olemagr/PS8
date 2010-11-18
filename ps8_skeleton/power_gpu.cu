@@ -6,14 +6,33 @@
 int n = 512;
 float
     a,
-    beta_old = 1.0,
+    beta_old,
     beta = 0.0,
     *x, *y,
-    ydot,
+  sqydot,ydot,
     thr = 1e-5;
 
 #define I (i+1)
 #define J (j+1)
+#define BLOCKSIZE 256
+
+__global__ void cudaDy(float * dx, float * dy, int n)
+{
+	int i = blockIdx.x*BLOCKSIZE+threadIdx.x;
+	float ytemp = 0.0;
+	for (int j = 0; j<n; j++)
+	{
+		ytemp += dx[j]/(0.5*(I+J-1)*(I+J-2)+I);
+	}
+	y[i]=ytemp;
+}
+__global__ void cudaDx(float* dx, float* dy, sqydot)
+{
+        int i = blockIdx.x*BLOCKSIZE+threadIdx.x;
+        dx[i] = dy[i] / sqydot;
+}
+
+
 
 int
 main ( int argc, char **argv )
@@ -25,32 +44,37 @@ main ( int argc, char **argv )
     memset ( x, 0, n*sizeof(float) );
     x[0] = 1.0;
 
+    cudaMalloc((void**)&dx, n*sizeof(float));
+    cudaMalloc((void**)&dy, n*sizeof(float));
+
+    cudaMemcpy(dx, x, n*sizeof(float), cudaMemcpyHostToDevice);
+
+    dim3 gridBlock (n/BLOCKSIZE);
+    dim3 threadBlock (BLOCKSIZE);
+
     do
     {
-        // y = A * x_old
-        for ( int i=0; i<n; i++ )
-        {
-            y[i] = 0.0;
-            for ( int j=0; j<n; j++ )
-            {
-                a = 1.0 / (0.5*(I+J-1)*(I+J-2)+I);
-                y[i] += a * x[j];
-            }
-        }
-        if ( fabs(beta_old-beta) < thr )
-            break;
+      cudaDy <<< gridBlock, threadBlock >>> (dx, dy, n);
+      cudaMemcpy(y, dy, n*sizeof(float), cudaMemcpyDeviceToHost);
+
         
         /* beta = dot(y,x) */
         beta_old = beta;
         beta = 0.0;
-        for ( int j=0; j<n; j++ ) beta += y[j] * x[j];
-
         ydot = 0.0;
-        for ( int j=0; j<n; j++ )
-            ydot += y[j] * y[j];
-        for ( int j=0; j<n; j++ )
-            x[j] = y[j] / sqrt(ydot);
+        for ( int j=0; j<n; j++ ) 
+	  {
+	    beta += y[j] * x[j];
+	    ydot += y[j] * y[j];
+	  }
+        if ( fabs(beta_old-beta) < thr )
+            break;
+	sqydot = sqrt(ydot);
+      cudaDx <<< gridBlock, threadBlock >>> (dx, dy, sqydot);
+      cudaMemcpy(x, dx, n*sizeof(float), cudaMemcpyDeviceToHost);
+
     } while ( 1 );
     printf ( "%e\n", beta );
     free ( x ), free ( y );
+    cudaFree(&dx), cudaFree(&dy);
 }
