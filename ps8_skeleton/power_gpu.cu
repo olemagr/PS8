@@ -8,7 +8,7 @@ float
     a,
     beta_old,
     beta = 0.0,
-    *x, *y,
+  *x, *dx, *y, *dy,
   sqydot,ydot,
     thr = 1e-5;
 
@@ -26,7 +26,7 @@ __global__ void cudaDy(float * dx, float * dy, int n)
 	}
 	y[i]=ytemp;
 }
-__global__ void cudaDx(float* dx, float* dy, sqydot)
+__global__ void cudaDx(float* dx, float* dy, float sqydot)
 {
         int i = blockIdx.x*BLOCKSIZE+threadIdx.x;
         dx[i] = dy[i] / sqydot;
