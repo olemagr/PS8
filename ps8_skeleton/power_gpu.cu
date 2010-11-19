@@ -6,8 +6,8 @@
 int 
 n = 512;
 float
-a, beta_old, beta = 0.0,
-  sqydot, ydot, thr = 1e-5,
+a, beta_old, beta = 0.0f,
+  sqydot, ydot, thr = 1e-5f,
   *x, *dx, *y, *dy;
 
 #define I (i+1)
@@ -19,10 +19,10 @@ __global__ void
 cudaDy(float * dx, float * dy, int n)
 {
   int i = blockIdx.x*BLOCKSIZE+threadIdx.x;
-  float ytemp = 0.0;
+  float ytemp = 0.0f;
   for (int j = 0; j<n; j++)
     {
-      ytemp += dx[j]/(0.5*(I+J-1)*(I+J-2)+I);
+      ytemp += dx[j]/(0.5f*(I+J-1)*(I+J-2)+I);
     }
   dy[i]=ytemp;
 }
@@ -43,7 +43,7 @@ main ( int argc, char **argv )
   x = (float *) malloc ( n*sizeof(float) );
   y = (float *) malloc ( n*sizeof(float) );
   memset ( x, 0, n*sizeof(float) );
-  x[0] = 1.0;
+  x[0] = 1.0f;
   // Allocate similar arrays on device.
   cudaMalloc(&dx, n*sizeof(float));
   cudaMalloc(&dy, n*sizeof(float));
@@ -63,8 +63,8 @@ main ( int argc, char **argv )
       
       // Calculate new beta and y dot product on host.
       beta_old = beta;
-      beta = 0.0;
-      ydot = 0.0;
+      beta = 0.0f;
+      ydot = 0.0f;
       for ( int j=0; j<n; j++ ) 
 	{
 	  beta += y[j] * x[j];
