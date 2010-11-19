@@ -7,11 +7,11 @@
 int n = 512;
 float
     a,
-    beta_old = 1.0,
-    beta = 0.0,
+    beta_old = 1.0f,
+    beta = 0.0f,
     *x, *y,
     ydot,
-    thr = 1e-5;
+    thr = 1e-5f;
 
 float
     * dx, * dy;
@@ -29,10 +29,10 @@ float
 __global__ void cu_mult (float * dx, float * dy, int n)
 {
         int i = blockIdx.x * BLOCKSIZE + threadIdx.x;
-        dy[i] = 0;
+        dy[i] = 0.0f;
 	for (int j = 0; j < n; ++j)
 	{
-                float a = 1.0 / (0.5*(I+J-1)*(I+J-2)+I);
+                float a = 1.0f / (0.5f*(I+J-1)*(I+J-2)+I);
                 dy[i] += a * dx[j];
 	}
 }
@@ -47,6 +47,7 @@ int
 main ( int argc, char **argv )
 {
     // Setting up n
+printf("yoyo");
     if ( argc > 1 )
         n = (1 << strtol ( argv[1], NULL, 10 ));
 	
@@ -58,11 +59,11 @@ main ( int argc, char **argv )
     // Allocating space on GPU
     cudaMalloc ( (void**) &dx,    n*sizeof(float) );
     cudaMalloc ( (void**) &dy,    n*sizeof(float) );
-    cudaMemset ( dy , 0, n*sizeof(float));	
+    cudaMemset ((void *) dy , 0, n*sizeof(float));	
 
     // Setting up initial values
     memset ( x, 0, n*sizeof(float) );
-    x[0] = 1.0;
+    x[0] = 1.0f;
     cudaMemcpy ( dx, x, n*sizeof(float), cudaMemcpyHostToDevice );
 
     // Setting up dimentions on GPU
@@ -80,8 +81,8 @@ main ( int argc, char **argv )
         cudaMemcpy ( x , dx, n*sizeof(float), cudaMemcpyDeviceToHost );
         
         beta_old = beta;
-        beta = 0.0;
-        ydot = 0.0;
+        beta = 0.0f;
+        ydot = 0.0f;
         for ( int j=0; j<n; j++ )
 	{
             beta += y[j] * x[j];
